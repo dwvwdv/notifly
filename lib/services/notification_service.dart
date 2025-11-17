@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/notification_model.dart';
-import 'database_service.dart';
 import 'webhook_service.dart';
 import 'preferences_service.dart';
 
@@ -36,8 +35,8 @@ class NotificationService {
               return;
             }
 
-            // Save to database
-            await DatabaseService.instance.insertNotification(notification);
+            // Note: Notification is already saved to database in native layer (NotificationListener.kt)
+            // No need to save again here to avoid duplicates
 
             // Send to webhook
             await WebhookService.instance.sendNotification(notification);
