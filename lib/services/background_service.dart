@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class BackgroundService {
@@ -43,8 +42,9 @@ class BackgroundService {
   }
 
   Future<bool> stopService() async {
-    final result = await FlutterForegroundTask.stopService();
-    return result.success;
+    await FlutterForegroundTask.stopService();
+    // Check if service actually stopped
+    return !await FlutterForegroundTask.isRunningService;
   }
 
   Future<bool> isRunning() async {
