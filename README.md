@@ -16,7 +16,28 @@
 - Android 6.0 (API 23) 或更高版本
 - 需要授予通知访问权限
 
-## 安装和使用
+## 下载 APK
+
+### 从 GitHub Releases 下载（推荐）
+
+前往 [Releases](../../releases) 页面下载最新版本的 APK 文件，直接安装到 Android 设备即可。
+
+## 开发者指南
+
+### 自动构建和发布
+
+本项目配置了 GitHub Actions CI/CD，可自动构建和发布 APK。详见 [RELEASE.md](RELEASE.md)。
+
+**快速发布新版本**：
+```bash
+# 1. 更新版本号（编辑 pubspec.yaml）
+# 2. 创建并推送 tag
+git tag v1.0.1
+git push origin v1.0.1
+# 3. GitHub Actions 会自动构建并发布 APK
+```
+
+### 从源码构建
 
 ### 1. 克隆项目
 
