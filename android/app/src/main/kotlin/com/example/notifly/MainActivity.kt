@@ -98,19 +98,23 @@ class MainActivity: FlutterActivity() {
 
     private fun getInstalledApps(): List<Map<String, String>> {
         val pm = packageManager
-        val apps = pm.getInstalledApplications(0)
+        val apps = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
         val appList = mutableListOf<Map<String, String>>()
 
         for (app in apps) {
             try {
-                val appName = pm.getApplicationLabel(app).toString()
                 val packageName = app.packageName
+                val appName = pm.getApplicationLabel(app).toString()
 
-                // Skip system apps (optional)
-                appList.add(mapOf(
-                    "appName" to appName,
-                    "packageName" to packageName
-                ))
+                // Include app if it has a launcher intent (user-visible apps)
+                // This includes both system apps with UI (Phone, Messages) and user-installed apps (LINE, Gotify)
+                val launchIntent = pm.getLaunchIntentForPackage(packageName)
+                if (launchIntent != null) {
+                    appList.add(mapOf(
+                        "appName" to appName,
+                        "packageName" to packageName
+                    ))
+                }
             } catch (e: Exception) {
                 // Skip apps that throw exceptions
             }
