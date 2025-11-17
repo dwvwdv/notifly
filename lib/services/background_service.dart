@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:isolate';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class BackgroundService {
@@ -34,17 +33,18 @@ class BackgroundService {
       return true;
     }
 
-    final serviceId = await FlutterForegroundTask.startService(
+    await FlutterForegroundTask.startService(
       notificationTitle: 'Notifly is running',
       notificationText: 'Monitoring notifications in background',
       callback: startCallback,
     );
 
-    return serviceId != null;
+    return FlutterForegroundTask.isRunningService;
   }
 
   Future<bool> stopService() async {
-    return await FlutterForegroundTask.stopService();
+    final result = await FlutterForegroundTask.stopService();
+    return result.success;
   }
 
   Future<bool> isRunning() async {
