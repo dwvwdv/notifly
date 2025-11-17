@@ -46,6 +46,20 @@ class NotificationListener : NotificationListenerService() {
                 packageName
             }
 
+            // Save to database directly
+            // This ensures notifications are saved even when the app is not running
+            val dbHelper = DatabaseHelper.getInstance(applicationContext)
+            dbHelper.insertNotification(
+                packageName = packageName,
+                appName = appName,
+                title = title,
+                text = text,
+                subText = subText,
+                bigText = bigText,
+                timestamp = sbn.postTime,
+                key = sbn.key
+            )
+
             // Create notification data JSON
             val notificationData = JSONObject().apply {
                 put("id", sbn.id)
@@ -59,9 +73,11 @@ class NotificationListener : NotificationListenerService() {
                 put("key", sbn.key)
             }
 
-            Log.d(TAG, "Notification received: $notificationData")
+            Log.d(TAG, "Notification received and saved: $notificationData")
 
-            // Broadcast to Flutter app
+            // Broadcast to Flutter app for real-time UI updates
+            // This will only work when the app is running, but that's OK
+            // because the notification is already saved to the database
             val intent = Intent(ACTION_NOTIFICATION_RECEIVED).apply {
                 putExtra(EXTRA_NOTIFICATION_DATA, notificationData.toString())
             }
