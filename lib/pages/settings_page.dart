@@ -112,6 +112,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _testWebhook() async {
     if (_webhookUrlController.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('請先輸入 Webhook URL')),
       );
@@ -122,11 +123,14 @@ class _SettingsPageState extends State<SettingsPage> {
       _isTestingWebhook = true;
     });
 
+    // Get provider reference before async operations
+    final settingsProvider = context.read<SettingsProvider>();
+
     try {
       // Save the URL first
-      await context.read<SettingsProvider>().setWebhookUrl(_webhookUrlController.text.trim());
+      await settingsProvider.setWebhookUrl(_webhookUrlController.text.trim());
 
-      final success = await context.read<SettingsProvider>().testWebhook();
+      final success = await settingsProvider.testWebhook();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
