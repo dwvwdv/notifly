@@ -1,11 +1,13 @@
 package com.example.notifly
 
 import android.app.Notification
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
@@ -18,6 +20,42 @@ class NotificationListener : NotificationListenerService() {
         const val EXTRA_NOTIFICATION_DATA = "notification_data"
     }
 
+    /**
+     * Check if an app is enabled for monitoring based on SharedPreferences
+     */
+    private fun isAppEnabled(packageName: String): Boolean {
+        try {
+            val prefs = applicationContext.getSharedPreferences(
+                "FlutterSharedPreferences",
+                Context.MODE_PRIVATE
+            )
+
+            // Check if monitoring all apps
+            val monitorAllApps = prefs.getBoolean("flutter.monitor_all_apps", true)
+            if (monitorAllApps) {
+                return true
+            }
+
+            // Check app-specific config
+            val appConfigsJson = prefs.getString("flutter.app_configs", null) ?: return false
+            val appConfigsArray = JSONArray(appConfigsJson)
+
+            for (i in 0 until appConfigsArray.length()) {
+                val config = appConfigsArray.getJSONObject(i)
+                if (config.getString("packageName") == packageName) {
+                    return config.getBoolean("isEnabled")
+                }
+            }
+
+            // If app is not in the config list and not monitoring all, default to false
+            return false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking if app is enabled: $e")
+            // Default to true to avoid blocking notifications on errors
+            return true
+        }
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         super.onNotificationPosted(sbn)
 
@@ -27,6 +65,12 @@ class NotificationListener : NotificationListenerService() {
 
             // Skip our own notifications
             if (packageName == applicationContext.packageName) {
+                return
+            }
+
+            // Check if this app is enabled for monitoring
+            if (!isAppEnabled(packageName)) {
+                Log.d(TAG, "Notification from $packageName skipped - app monitoring disabled")
                 return
             }
 
