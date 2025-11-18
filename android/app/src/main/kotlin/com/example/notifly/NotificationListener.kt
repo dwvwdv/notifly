@@ -22,6 +22,9 @@ class NotificationListener : NotificationListenerService() {
 
     /**
      * Check if an app is enabled for monitoring based on SharedPreferences
+     * Logic:
+     * 1. Check if app has specific config in app_configs - use that config
+     * 2. If no specific config, fallback to monitor_all_apps setting
      */
     private fun isAppEnabled(packageName: String): Boolean {
         try {
@@ -30,27 +33,30 @@ class NotificationListener : NotificationListenerService() {
                 Context.MODE_PRIVATE
             )
 
-            // Check if monitoring all apps
-            val monitorAllApps = prefs.getBoolean("flutter.monitor_all_apps", true)
-            if (monitorAllApps) {
-                return true
-            }
+            // First, check if there's an app-specific config
+            val appConfigsJson = prefs.getString("flutter.app_configs", null)
 
-            // Check app-specific config
-            val appConfigsJson = prefs.getString("flutter.app_configs", null) ?: return false
-            val appConfigsArray = JSONArray(appConfigsJson)
+            if (appConfigsJson != null) {
+                val appConfigsArray = JSONArray(appConfigsJson)
 
-            for (i in 0 until appConfigsArray.length()) {
-                val config = appConfigsArray.getJSONObject(i)
-                if (config.getString("packageName") == packageName) {
-                    return config.getBoolean("isEnabled")
+                // Look for this specific app's configuration
+                for (i in 0 until appConfigsArray.length()) {
+                    val config = appConfigsArray.getJSONObject(i)
+                    if (config.getString("packageName") == packageName) {
+                        val isEnabled = config.getBoolean("isEnabled")
+                        Log.d(TAG, "App $packageName has specific config - isEnabled: $isEnabled")
+                        return isEnabled
+                    }
                 }
             }
 
-            // If app is not in the config list and not monitoring all, default to false
-            return false
+            // No specific config found, fallback to monitor_all_apps setting
+            val monitorAllApps = prefs.getBoolean("flutter.monitor_all_apps", true)
+            Log.d(TAG, "App $packageName not in config - using monitor_all_apps: $monitorAllApps")
+            return monitorAllApps
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking if app is enabled: $e")
+            Log.e(TAG, "Error checking if app is enabled: $e", e)
             // Default to true to avoid blocking notifications on errors
             return true
         }

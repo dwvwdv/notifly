@@ -79,20 +79,24 @@ class PreferencesService {
     await saveAppConfigs(configs);
   }
 
+  /// Check if an app is enabled for monitoring
+  /// Logic:
+  /// 1. If app has specific config in app_configs, use that config's isEnabled value
+  /// 2. If no specific config, fallback to monitor_all_apps setting
   bool isAppEnabled(String packageName) {
-    if (getMonitorAllApps()) return true;
-
     final configs = getAppConfigs();
-    final config = configs.firstWhere(
-      (c) => c.packageName == packageName,
-      orElse: () => AppConfig(
-        packageName: packageName,
-        appName: '',
-        isEnabled: false,
-      ),
-    );
 
-    return config.isEnabled;
+    // Try to find specific config for this app
+    try {
+      final config = configs.firstWhere(
+        (c) => c.packageName == packageName,
+      );
+      // Found specific config, use its isEnabled value
+      return config.isEnabled;
+    } catch (e) {
+      // No specific config found, fallback to monitor_all_apps
+      return getMonitorAllApps();
+    }
   }
 
   // Background service
