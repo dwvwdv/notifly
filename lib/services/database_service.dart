@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/notification_model.dart';
-import 'preferences_service.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -68,23 +67,13 @@ class DatabaseService {
       offset: offset,
     );
 
-    final allNotifications = maps.map((map) => NotificationModel.fromDatabase(map)).toList();
-
-    // Filter notifications based on app enabled status
-    return allNotifications.where((notification) {
-      return PreferencesService.instance.isAppEnabled(notification.packageName);
-    }).toList();
+    return maps.map((map) => NotificationModel.fromDatabase(map)).toList();
   }
 
   Future<List<NotificationModel>> getNotificationsByPackage(
     String packageName, {
     int limit = 100,
   }) async {
-    // Check if app is enabled before querying
-    if (!PreferencesService.instance.isAppEnabled(packageName)) {
-      return [];
-    }
-
     final db = await database;
     final maps = await db.query(
       'notifications',
@@ -101,6 +90,20 @@ class DatabaseService {
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM notifications');
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<List<Map<String, String>>> getDistinctApps() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT DISTINCT package_name, app_name
+      FROM notifications
+      ORDER BY app_name
+    ''');
+
+    return result.map((row) => {
+      'packageName': row['package_name'] as String,
+      'appName': row['app_name'] as String,
+    }).toList();
   }
 
   Future<int> deleteNotification(int id) async {
