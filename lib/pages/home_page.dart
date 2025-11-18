@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
+import '../services/preferences_service.dart';
 import '../providers/settings_provider.dart';
 import 'settings_page.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +19,8 @@ class _HomePageState extends State<HomePage> {
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   bool _hasPermission = false;
+  final Set<String> _selectedPackages = {};
+  List<Map<String, String>> _availableApps = [];
 
   @override
   void initState() {
@@ -44,9 +47,11 @@ class _HomePageState extends State<HomePage> {
     });
 
     final notifications = await DatabaseService.instance.getNotifications(limit: 100);
+    final apps = await DatabaseService.instance.getDistinctApps();
 
     setState(() {
       _notifications = notifications;
+      _availableApps = apps;
       _isLoading = false;
     });
   }
@@ -57,6 +62,80 @@ class _HomePageState extends State<HomePage> {
         _notifications.insert(0, notification);
       });
     });
+  }
+
+  List<NotificationModel> get _filteredNotifications {
+    if (_selectedPackages.isEmpty) {
+      // Default: only show notifications from enabled apps
+      return _notifications.where((notification) {
+        return PreferencesService.instance.isAppEnabled(notification.packageName);
+      }).toList();
+    }
+    // User has selected specific apps to filter
+    return _notifications.where((notification) {
+      return _selectedPackages.contains(notification.packageName);
+    }).toList();
+  }
+
+  Future<void> _showAppFilterDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Filter by Apps'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: _availableApps.isEmpty
+                ? const Center(child: Text('No apps with notifications'))
+                : ListView(
+                    shrinkWrap: true,
+                    children: [
+                      CheckboxListTile(
+                        title: const Text('Show All'),
+                        value: _selectedPackages.isEmpty,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            setState(() {
+                              if (value == true) {
+                                _selectedPackages.clear();
+                              }
+                            });
+                          });
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const Divider(),
+                      ..._availableApps.map((app) {
+                        final packageName = app['packageName']!;
+                        final appName = app['appName']!;
+                        return CheckboxListTile(
+                          title: Text(appName),
+                          value: _selectedPackages.contains(packageName),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedPackages.add(packageName);
+                                } else {
+                                  _selectedPackages.remove(packageName);
+                                }
+                              });
+                            });
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _formatTimestamp(int timestamp) {
@@ -85,6 +164,39 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Notifly'),
         actions: [
+          IconButton(
+            icon: Stack(
+              children: [
+                const Icon(Icons.filter_list),
+                if (_selectedPackages.isNotEmpty)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 12,
+                        minHeight: 12,
+                      ),
+                      child: Text(
+                        '${_selectedPackages.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            onPressed: _showAppFilterDialog,
+            tooltip: 'Filter by apps',
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
@@ -162,16 +274,20 @@ class _HomePageState extends State<HomePage> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _notifications.isEmpty
-                    ? const Center(
-                        child: Text('No notifications yet'),
+                : _filteredNotifications.isEmpty
+                    ? Center(
+                        child: Text(
+                          _selectedPackages.isNotEmpty
+                              ? 'No notifications from selected apps'
+                              : 'No notifications yet',
+                        ),
                       )
                     : RefreshIndicator(
                         onRefresh: _loadNotifications,
                         child: ListView.builder(
-                          itemCount: _notifications.length,
+                          itemCount: _filteredNotifications.length,
                           itemBuilder: (context, index) {
-                            final notification = _notifications[index];
+                            final notification = _filteredNotifications[index];
                             return Card(
                               margin: const EdgeInsets.symmetric(
                                 horizontal: 8,

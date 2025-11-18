@@ -92,6 +92,20 @@ class DatabaseService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
+  Future<List<Map<String, String>>> getDistinctApps() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT DISTINCT package_name, app_name
+      FROM notifications
+      ORDER BY app_name
+    ''');
+
+    return result.map((row) => {
+      'packageName': row['package_name'] as String,
+      'appName': row['app_name'] as String,
+    }).toList();
+  }
+
   Future<int> deleteNotification(int id) async {
     final db = await database;
     return await db.delete(
