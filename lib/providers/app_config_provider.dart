@@ -100,5 +100,5 @@ class AppConfigProvider extends ChangeNotifier {
 
   List<AppConfig> get enabledApps => _appConfigs.where((c) => c.isEnabled).toList();
 
-  int get enabledAppCount => _monitorAllApps ? _appConfigs.length : enabledApps.length;
+  int get enabledAppCount => _appConfigs.where((c) => c.isEnabled).length;
 }
