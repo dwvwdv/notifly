@@ -18,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   bool _hasPermission = false;
-  Set<String> _selectedPackages = {};
+  final Set<String> _selectedPackages = {};
   List<Map<String, String>> _availableApps = [];
 
   @override
