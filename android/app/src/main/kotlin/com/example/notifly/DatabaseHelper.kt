@@ -10,7 +10,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "notifications.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
         private const val TABLE_NOTIFICATIONS = "notifications"
         private const val TAG = "DatabaseHelper"
 
@@ -46,7 +46,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $COLUMN_SUB_TEXT TEXT,
                 $COLUMN_BIG_TEXT TEXT,
                 $COLUMN_TIMESTAMP INTEGER NOT NULL,
-                $COLUMN_KEY TEXT UNIQUE
+                $COLUMN_KEY TEXT
             )
         """.trimIndent()
 
@@ -87,18 +87,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 put(COLUMN_KEY, key)
             }
 
-            // Use INSERT OR IGNORE to prevent duplicate notifications with the same key
-            val id = db.insertWithOnConflict(
-                TABLE_NOTIFICATIONS,
-                null,
-                values,
-                SQLiteDatabase.CONFLICT_IGNORE
-            )
-            if (id == -1L) {
-                Log.d(TAG, "Duplicate notification ignored (key: $key)")
-            } else {
-                Log.d(TAG, "Notification inserted with id: $id")
-            }
+            // Insert all notifications, including duplicates
+            val id = db.insert(TABLE_NOTIFICATIONS, null, values)
+            Log.d(TAG, "Notification inserted with id: $id")
             id
         } catch (e: Exception) {
             Log.e(TAG, "Error inserting notification", e)

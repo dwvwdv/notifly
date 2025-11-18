@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
+import '../services/preferences_service.dart';
 import '../providers/settings_provider.dart';
 import 'settings_page.dart';
 import 'package:intl/intl.dart';
@@ -65,8 +66,12 @@ class _HomePageState extends State<HomePage> {
 
   List<NotificationModel> get _filteredNotifications {
     if (_selectedPackages.isEmpty) {
-      return _notifications;
+      // Default: only show notifications from enabled apps
+      return _notifications.where((notification) {
+        return PreferencesService.instance.isAppEnabled(notification.packageName);
+      }).toList();
     }
+    // User has selected specific apps to filter
     return _notifications.where((notification) {
       return _selectedPackages.contains(notification.packageName);
     }).toList();
@@ -75,54 +80,60 @@ class _HomePageState extends State<HomePage> {
   Future<void> _showAppFilterDialog() async {
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter by Apps'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: _availableApps.isEmpty
-              ? const Center(child: Text('No apps with notifications'))
-              : ListView(
-                  shrinkWrap: true,
-                  children: [
-                    CheckboxListTile(
-                      title: const Text('Show All'),
-                      value: _selectedPackages.isEmpty,
-                      onChanged: (value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedPackages.clear();
-                          }
-                        });
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ..._availableApps.map((app) {
-                      final packageName = app['packageName']!;
-                      final appName = app['appName']!;
-                      return CheckboxListTile(
-                        title: Text(appName),
-                        value: _selectedPackages.contains(packageName),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Filter by Apps'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: _availableApps.isEmpty
+                ? const Center(child: Text('No apps with notifications'))
+                : ListView(
+                    shrinkWrap: true,
+                    children: [
+                      CheckboxListTile(
+                        title: const Text('Show All'),
+                        value: _selectedPackages.isEmpty,
                         onChanged: (value) {
-                          setState(() {
-                            if (value == true) {
-                              _selectedPackages.add(packageName);
-                            } else {
-                              _selectedPackages.remove(packageName);
-                            }
+                          setDialogState(() {
+                            setState(() {
+                              if (value == true) {
+                                _selectedPackages.clear();
+                              }
+                            });
                           });
+                          Navigator.pop(context);
                         },
-                      );
-                    }),
-                  ],
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
+                      ),
+                      const Divider(),
+                      ..._availableApps.map((app) {
+                        final packageName = app['packageName']!;
+                        final appName = app['appName']!;
+                        return CheckboxListTile(
+                          title: Text(appName),
+                          value: _selectedPackages.contains(packageName),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedPackages.add(packageName);
+                                } else {
+                                  _selectedPackages.remove(packageName);
+                                }
+                              });
+                            });
+                          },
+                        );
+                      }),
+                    ],
+                  ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
       ),
     );
   }
