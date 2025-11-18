@@ -17,13 +17,20 @@ class WebhookService {
         return false;
       }
 
-      final webhookUrl = prefs.getWebhookUrl();
-      if (webhookUrl == null || webhookUrl.isEmpty) {
+      // Check if app is enabled for monitoring
+      if (!prefs.isAppEnabled(notification.packageName)) {
         return false;
       }
 
-      // Check if app is enabled for monitoring
-      if (!prefs.isAppEnabled(notification.packageName)) {
+      // Get app-specific webhook URL or fall back to global webhook URL
+      final appConfigs = prefs.getAppConfigs();
+      final appConfig = appConfigs.firstWhere(
+        (c) => c.packageName == notification.packageName,
+        orElse: () => null,
+      );
+
+      final webhookUrl = appConfig?.webhookUrl ?? prefs.getWebhookUrl();
+      if (webhookUrl == null || webhookUrl.isEmpty) {
         return false;
       }
 

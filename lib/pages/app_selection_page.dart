@@ -12,6 +12,56 @@ class AppSelectionPage extends StatefulWidget {
 class _AppSelectionPageState extends State<AppSelectionPage> {
   String _searchQuery = '';
 
+  void _showWebhookDialog(BuildContext context, String packageName, String appName, String? currentWebhookUrl) {
+    final TextEditingController controller = TextEditingController(text: currentWebhookUrl ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Webhook for $appName'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Set a custom webhook URL for this app. Leave empty to use the global webhook URL.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Webhook URL',
+                hintText: 'https://your-server.com/webhook',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final appConfigProvider = context.read<AppConfigProvider>();
+              appConfigProvider.updateAppWebhook(
+                packageName,
+                controller.text.isEmpty ? null : controller.text,
+              );
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Webhook URL updated')),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final appConfigProvider = context.watch<AppConfigProvider>();
@@ -92,19 +142,56 @@ class _AppSelectionPageState extends State<AppSelectionPage> {
                           itemCount: filteredApps.length,
                           itemBuilder: (context, index) {
                             final config = filteredApps[index];
-                            return SwitchListTile(
+                            return ListTile(
                               title: Text(config.appName),
-                              subtitle: Text(
-                                config.packageName,
-                                style: const TextStyle(fontSize: 12),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    config.packageName,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  if (config.webhookUrl != null && config.webhookUrl!.isNotEmpty)
+                                    Text(
+                                      'Custom webhook: ${config.webhookUrl}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.blue.shade700,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                ],
                               ),
-                              value: config.isEnabled,
-                              onChanged: (value) {
-                                appConfigProvider.toggleApp(
-                                  config.packageName,
-                                  value,
-                                );
-                              },
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.webhook,
+                                      color: config.webhookUrl != null && config.webhookUrl!.isNotEmpty
+                                          ? Colors.blue
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      _showWebhookDialog(
+                                        context,
+                                        config.packageName,
+                                        config.appName,
+                                        config.webhookUrl,
+                                      );
+                                    },
+                                  ),
+                                  Switch(
+                                    value: config.isEnabled,
+                                    onChanged: (value) {
+                                      appConfigProvider.toggleApp(
+                                        config.packageName,
+                                        value,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         ),

@@ -8,6 +8,8 @@ import '../providers/settings_provider.dart';
 import 'settings_page.dart';
 import 'package:intl/intl.dart';
 
+enum FilterMode { detectingApp, showAll, custom }
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -21,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   bool _hasPermission = false;
   final Set<String> _selectedPackages = {};
   List<Map<String, String>> _availableApps = [];
+  FilterMode _filterMode = FilterMode.detectingApp;
 
   @override
   void initState() {
@@ -65,13 +68,19 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<NotificationModel> get _filteredNotifications {
-    if (_selectedPackages.isEmpty) {
-      // Default: only show notifications from enabled apps
+    if (_filterMode == FilterMode.showAll) {
+      // Show ALL notifications from ALL apps
+      return _notifications;
+    }
+
+    if (_filterMode == FilterMode.detectingApp) {
+      // Show only notifications from enabled apps
       return _notifications.where((notification) {
         return PreferencesService.instance.isAppEnabled(notification.packageName);
       }).toList();
     }
-    // User has selected specific apps to filter
+
+    // Custom filter: show only selected apps
     return _notifications.where((notification) {
       return _selectedPackages.contains(notification.packageName);
     }).toList();
@@ -91,12 +100,30 @@ class _HomePageState extends State<HomePage> {
                     shrinkWrap: true,
                     children: [
                       CheckboxListTile(
-                        title: const Text('Show All'),
-                        value: _selectedPackages.isEmpty,
+                        title: const Text('Detecting App'),
+                        subtitle: const Text('Show only enabled apps'),
+                        value: _filterMode == FilterMode.detectingApp,
                         onChanged: (value) {
                           setDialogState(() {
                             setState(() {
                               if (value == true) {
+                                _filterMode = FilterMode.detectingApp;
+                                _selectedPackages.clear();
+                              }
+                            });
+                          });
+                          Navigator.pop(context);
+                        },
+                      ),
+                      CheckboxListTile(
+                        title: const Text('Show All'),
+                        subtitle: const Text('Show all apps regardless of settings'),
+                        value: _filterMode == FilterMode.showAll,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            setState(() {
+                              if (value == true) {
+                                _filterMode = FilterMode.showAll;
                                 _selectedPackages.clear();
                               }
                             });
@@ -105,6 +132,13 @@ class _HomePageState extends State<HomePage> {
                         },
                       ),
                       const Divider(),
+                      const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'Or select specific apps:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
                       ..._availableApps.map((app) {
                         final packageName = app['packageName']!;
                         final appName = app['appName']!;
@@ -115,9 +149,14 @@ class _HomePageState extends State<HomePage> {
                             setDialogState(() {
                               setState(() {
                                 if (value == true) {
+                                  _filterMode = FilterMode.custom;
                                   _selectedPackages.add(packageName);
                                 } else {
                                   _selectedPackages.remove(packageName);
+                                  // If no apps are selected, revert to detecting app mode
+                                  if (_selectedPackages.isEmpty) {
+                                    _filterMode = FilterMode.detectingApp;
+                                  }
                                 }
                               });
                             });
@@ -168,7 +207,7 @@ class _HomePageState extends State<HomePage> {
             icon: Stack(
               children: [
                 const Icon(Icons.filter_list),
-                if (_selectedPackages.isNotEmpty)
+                if (_filterMode != FilterMode.detectingApp)
                   Positioned(
                     right: 0,
                     top: 0,

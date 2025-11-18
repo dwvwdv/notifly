@@ -85,6 +85,15 @@ class AppConfigProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateAppWebhook(String packageName, String? webhookUrl) async {
+    final index = _appConfigs.indexWhere((c) => c.packageName == packageName);
+    if (index != -1) {
+      _appConfigs[index] = _appConfigs[index].copyWith(webhookUrl: webhookUrl);
+      await _saveConfigs();
+      notifyListeners();
+    }
+  }
+
   Future<void> _saveConfigs() async {
     await PreferencesService.instance.saveAppConfigs(_appConfigs);
   }
