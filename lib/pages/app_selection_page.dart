@@ -125,7 +125,14 @@ class _AppSelectionPageState extends State<AppSelectionPage> {
       if (_searchQuery.isEmpty) return true;
       return config.appName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           config.packageName.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
+    }).toList()
+      ..sort((a, b) {
+        // Sort enabled apps to the top
+        if (a.isEnabled && !b.isEnabled) return -1;
+        if (!a.isEnabled && b.isEnabled) return 1;
+        // If both have the same enabled status, sort by app name
+        return a.appName.toLowerCase().compareTo(b.appName.toLowerCase());
+      });
 
     return Scaffold(
       appBar: AppBar(
