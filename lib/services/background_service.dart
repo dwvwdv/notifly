@@ -8,9 +8,9 @@ class BackgroundService {
   void init() {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'notifly_foreground_service',
-        channelName: 'Notifly Foreground Service',
-        channelDescription: 'This notification appears when Notifly is monitoring notifications.',
+        channelId: 'hookfy_foreground_service',
+        channelName: 'Hookfy Foreground Service',
+        channelDescription: 'This notification appears when Hookfy is monitoring notifications.',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
       ),
@@ -33,7 +33,7 @@ class BackgroundService {
     }
 
     await FlutterForegroundTask.startService(
-      notificationTitle: 'Notifly is running',
+      notificationTitle: 'Hookfy is running',
       notificationText: 'Monitoring notifications in background',
       callback: startCallback,
     );
@@ -56,7 +56,7 @@ class BackgroundService {
     String? text,
   }) async {
     await FlutterForegroundTask.updateService(
-      notificationTitle: title ?? 'Notifly is running',
+      notificationTitle: title ?? 'Hookfy is running',
       notificationText: text ?? 'Monitoring notifications in background',
     );
   }

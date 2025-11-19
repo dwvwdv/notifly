@@ -43,7 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Notifly 支援兩種 webhook 配置方式：',
+                'Hookfy 支援兩種 webhook 配置方式：',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 12),
@@ -297,7 +297,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const ListTile(
             title: Text('Description'),
             subtitle: Text(
-              'Notifly monitors Android notifications and sends them to your webhook endpoint.',
+              'Hookfy monitors Android notifications and sends them to your webhook endpoint.',
             ),
           ),
         ],

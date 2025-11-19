@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'Notifly',
+        title: 'Hookfy',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           useMaterial3: true,

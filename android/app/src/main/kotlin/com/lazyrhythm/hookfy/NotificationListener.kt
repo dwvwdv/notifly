@@ -1,4 +1,4 @@
-package com.example.notifly
+package com.lazyrhythm.hookfy
 
 import android.app.Notification
 import android.content.Context
@@ -16,7 +16,7 @@ class NotificationListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "NotificationListener"
-        const val ACTION_NOTIFICATION_RECEIVED = "com.example.notifly.NOTIFICATION_RECEIVED"
+        const val ACTION_NOTIFICATION_RECEIVED = "com.lazyrhythm.hookfy.NOTIFICATION_RECEIVED"
         const val EXTRA_NOTIFICATION_DATA = "notification_data"
     }
 

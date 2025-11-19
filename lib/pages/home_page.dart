@@ -201,7 +201,7 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifly'),
+        title: const Text('Hookfy'),
         actions: [
           IconButton(
             icon: Stack(
@@ -265,7 +265,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Please enable notification access for Notifly to monitor notifications.',
+                    'Please enable notification access for Hookfy to monitor notifications.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),

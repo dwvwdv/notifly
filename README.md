@@ -1,4 +1,4 @@
-# Notifly
+# Hookfy
 
 一个使用 Flutter 开发的 Android 通知监测应用，支持 Webhook 推送功能。
 
@@ -43,7 +43,7 @@ git push origin v1.0.1
 
 ```bash
 git clone <repository-url>
-cd notifly
+cd hookfy
 ```
 
 ### 2. 安装依赖
@@ -63,7 +63,7 @@ flutter run
 首次运行时，应用会提示您授予通知访问权限。请按照以下步骤操作：
 
 1. 点击"Grant Permission"按钮
-2. 在系统设置中找到"Notifly"
+2. 在系统设置中找到"Hookfy"
 3. 开启通知访问权限
 
 ### 5. 配置 Webhook
@@ -138,7 +138,7 @@ lib/
 └── main.dart        # 入口文件
 
 android/
-└── app/src/main/kotlin/com/example/notifly/
+└── app/src/main/kotlin/com/lazyrhythm/hookfy/
     ├── MainActivity.kt
     ├── NotificationListener.kt  # 通知监听服务
     └── BootReceiver.kt         # 开机自启动

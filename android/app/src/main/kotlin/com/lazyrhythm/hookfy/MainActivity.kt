@@ -1,4 +1,4 @@
-package com.example.notifly
+package com.lazyrhythm.hookfy
 
 import android.content.*
 import android.os.Bundle
@@ -9,8 +9,8 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.notifly/notification"
-    private val EVENT_CHANNEL = "com.example.notifly/notification_stream"
+    private val CHANNEL = "com.lazyrhythm.hookfy/notification"
+    private val EVENT_CHANNEL = "com.lazyrhythm.hookfy/notification_stream"
 
     private var notificationReceiver: BroadcastReceiver? = null
     private var eventSink: EventChannel.EventSink? = null

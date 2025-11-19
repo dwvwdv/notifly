@@ -56,19 +56,19 @@ jobs:
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           cp build/app/outputs/flutter-apk/app-release.apk \
-             build/app/outputs/flutter-apk/notifly-${VERSION}.apk
+             build/app/outputs/flutter-apk/hookfy-${VERSION}.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: apk-release
-          path: build/app/outputs/flutter-apk/notifly-*.apk
+          path: build/app/outputs/flutter-apk/hookfy-*.apk
 
       - name: Create Release
         if: github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
-          files: build/app/outputs/flutter-apk/notifly-*.apk
+          files: build/app/outputs/flutter-apk/hookfy-*.apk
           generate_release_notes: true
           draft: false
           prerelease: false
@@ -79,6 +79,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: notifly-apk-${{ steps.get_version.outputs.VERSION }}
-          path: build/app/outputs/flutter-apk/notifly-*.apk
+          name: hookfy-apk-${{ steps.get_version.outputs.VERSION }}
+          path: build/app/outputs/flutter-apk/hookfy-*.apk
           retention-days: 30

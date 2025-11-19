@@ -111,7 +111,7 @@ class WebhookService {
       final testPayload = {
         'type': 'test',
         'timestamp': DateTime.now().toIso8601String(),
-        'message': 'This is a test notification from Notifly',
+        'message': 'This is a test notification from Hookfy',
       };
 
       final requestHeaders = {

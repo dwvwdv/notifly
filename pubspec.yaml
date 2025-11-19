@@ -1,4 +1,4 @@
-name: notifly
+name: hookfy
 description: A Flutter app to monitor Android notifications with webhook support
 publish_to: 'none'
 version: 1.0.0+1

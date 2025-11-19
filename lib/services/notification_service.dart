@@ -8,8 +8,8 @@ import 'preferences_service.dart';
 class NotificationService {
   static final NotificationService instance = NotificationService._init();
 
-  static const platform = MethodChannel('com.example.notifly/notification');
-  static const eventChannel = EventChannel('com.example.notifly/notification_stream');
+  static const platform = MethodChannel('com.lazyrhythm.hookfy/notification');
+  static const eventChannel = EventChannel('com.lazyrhythm.hookfy/notification_stream');
 
   final _notificationController = StreamController<NotificationModel>.broadcast();
   Stream<NotificationModel> get notificationStream => _notificationController.stream;

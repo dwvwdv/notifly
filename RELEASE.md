@@ -69,7 +69,7 @@
 ### 从 GitHub Releases
 1. 前往仓库的 [Releases](../../releases) 页面
 2. 找到对应版本
-3. 下载 `notifly-v*.apk` 文件
+3. 下载 `hookfy-v*.apk` 文件
 
 ### 从 Actions Artifacts（手动构建）
 1. 前往 [Actions](../../actions) 页面

@@ -1,4 +1,4 @@
-package com.example.notifly
+package com.lazyrhythm.hookfy
 
 import android.content.ContentValues
 import android.content.Context

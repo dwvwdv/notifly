@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.notifly"
+    namespace "com.lazyrhythm.hookfy"
     compileSdk 34
     ndkVersion flutter.ndkVersion
 
@@ -41,7 +41,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.notifly"
+        applicationId "com.lazyrhythm.hookfy"
         minSdk 23
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
