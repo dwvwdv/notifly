@@ -36,6 +36,9 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Generate app icons
+        run: flutter pub run flutter_launcher_icons
+
       - name: Run tests
         run: flutter test || echo "No tests found or tests failed"
         continue-on-error: true
