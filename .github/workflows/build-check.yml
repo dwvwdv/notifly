@@ -41,6 +41,19 @@ jobs:
         run: flutter test || echo "No tests found or tests failed"
         continue-on-error: true
 
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/hookfy-release-key.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=hookfy-release-key.jks
+          EOF
+
       - name: Build APK (release)
         run: flutter build apk --release
 

@@ -45,3 +45,8 @@ app.*.map.json
 
 # Android local properties
 /android/local.properties
+
+# Android signing keys (DO NOT COMMIT)
+/android/app/*.jks
+/android/app/*.keystore
+/android/key.properties
