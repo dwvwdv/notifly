@@ -327,49 +327,100 @@ class _HomePageState extends State<HomePage> {
                           itemCount: _filteredNotifications.length,
                           itemBuilder: (context, index) {
                             final notification = _filteredNotifications[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
+                            return Dismissible(
+                              key: Key('notification_${notification.id}'),
+                              direction: DismissDirection.horizontal,
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 20),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
                               ),
-                              child: ListTile(
-                                title: Text(
-                                  notification.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                              secondaryBackground: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                child: const Icon(
+                                  Icons.delete,
+                                  color: Colors.white,
+                                  size: 32,
                                 ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      notification.text,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                              ),
+                              onDismissed: (direction) async {
+                                // Remove from database
+                                await DatabaseService.instance.deleteNotification(notification.id!);
+
+                                // Remove from local list
+                                setState(() {
+                                  _notifications.removeWhere((n) => n.id == notification.id);
+                                });
+
+                                // Show snackbar
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('已刪除 ${notification.appName} 的通知'),
+                                      duration: const Duration(seconds: 2),
+                                      action: SnackBarAction(
+                                        label: '復原',
+                                        onPressed: () async {
+                                          // Re-insert notification
+                                          await DatabaseService.instance.insertNotification(notification);
+                                          await _loadNotifications();
+                                        },
+                                      ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          notification.appName,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _formatTimestamp(notification.timestamp),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                  );
+                                }
+                              },
+                              child: Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
                                 ),
-                                isThreeLine: true,
+                                child: ListTile(
+                                  title: Text(
+                                    notification.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        notification.text,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            notification.appName,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _formatTimestamp(notification.timestamp),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  isThreeLine: true,
+                                ),
                               ),
                             );
                           },
