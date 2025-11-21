@@ -264,6 +264,25 @@ class _SettingsPageState extends State<SettingsPage> {
           const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
+              '通知列表',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('滑動刪除通知'),
+            subtitle: const Text('左右滑動可刪除通知紀錄'),
+            value: settingsProvider.swipeToDeleteEnabled,
+            onChanged: (value) {
+              settingsProvider.toggleSwipeToDelete(value);
+            },
+          ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
               'Background Service',
               style: TextStyle(
                 fontSize: 18,

@@ -125,6 +125,15 @@ class PreferencesService {
     }
   }
 
+  // Swipe to delete notifications
+  Future<void> setSwipeToDeleteEnabled(bool enabled) async {
+    await prefs.setBool('swipe_to_delete_enabled', enabled);
+  }
+
+  bool getSwipeToDeleteEnabled() {
+    return prefs.getBool('swipe_to_delete_enabled') ?? true; // 預設開啟
+  }
+
   // Clear all data
   Future<void> clearAll() async {
     await prefs.clear();

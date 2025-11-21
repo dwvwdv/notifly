@@ -195,6 +195,54 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Widget _buildNotificationCard(NotificationModel notification) {
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      child: ListTile(
+        title: Text(
+          notification.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              notification.text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  notification.appName,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatTimestamp(notification.timestamp),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        isThreeLine: true,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsProvider = context.watch<SettingsProvider>();
@@ -327,6 +375,13 @@ class _HomePageState extends State<HomePage> {
                           itemCount: _filteredNotifications.length,
                           itemBuilder: (context, index) {
                             final notification = _filteredNotifications[index];
+                            final card = _buildNotificationCard(notification);
+
+                            // 根據設定決定是否啟用滑動刪除
+                            if (!settingsProvider.swipeToDeleteEnabled) {
+                              return card;
+                            }
+
                             return Dismissible(
                               key: Key('notification_${notification.id}'),
                               direction: DismissDirection.horizontal,
@@ -380,51 +435,7 @@ class _HomePageState extends State<HomePage> {
                                   );
                                 }
                               },
-                              child: Card(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                child: ListTile(
-                                  title: Text(
-                                    notification.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        notification.text,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Text(
-                                            notification.appName,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            _formatTimestamp(notification.timestamp),
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  isThreeLine: true,
-                                ),
-                              ),
+                              child: card,
                             );
                           },
                         ),

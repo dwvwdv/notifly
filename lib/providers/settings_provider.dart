@@ -8,11 +8,13 @@ class SettingsProvider extends ChangeNotifier {
   bool _webhookEnabled = false;
   bool _backgroundServiceEnabled = true;
   Map<String, String> _webhookHeaders = {};
+  bool _swipeToDeleteEnabled = true;
 
   String get webhookUrl => _webhookUrl;
   bool get webhookEnabled => _webhookEnabled;
   bool get backgroundServiceEnabled => _backgroundServiceEnabled;
   Map<String, String> get webhookHeaders => _webhookHeaders;
+  bool get swipeToDeleteEnabled => _swipeToDeleteEnabled;
 
   Future<void> init() async {
     await loadSettings();
@@ -24,6 +26,7 @@ class SettingsProvider extends ChangeNotifier {
     _webhookEnabled = prefs.getWebhookEnabled();
     _backgroundServiceEnabled = prefs.getBackgroundServiceEnabled();
     _webhookHeaders = prefs.getWebhookHeaders();
+    _swipeToDeleteEnabled = prefs.getSwipeToDeleteEnabled();
     notifyListeners();
   }
 
@@ -65,5 +68,11 @@ class SettingsProvider extends ChangeNotifier {
       _webhookUrl,
       headers: _webhookHeaders,
     );
+  }
+
+  Future<void> toggleSwipeToDelete(bool enabled) async {
+    _swipeToDeleteEnabled = enabled;
+    await PreferencesService.instance.setSwipeToDeleteEnabled(enabled);
+    notifyListeners();
   }
 }
