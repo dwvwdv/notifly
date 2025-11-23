@@ -130,6 +130,18 @@ class DatabaseService {
     return await db.delete('notifications');
   }
 
+  Future<int> deleteNotificationsByPackages(List<String> packageNames) async {
+    if (packageNames.isEmpty) return 0;
+
+    final db = await database;
+    final placeholders = List.filled(packageNames.length, '?').join(',');
+    return await db.delete(
+      'notifications',
+      where: 'package_name IN ($placeholders)',
+      whereArgs: packageNames,
+    );
+  }
+
   Future<void> close() async {
     final db = await database;
     await db.close();
