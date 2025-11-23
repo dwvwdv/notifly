@@ -14,7 +14,7 @@ class AppConfigProvider extends ChangeNotifier {
 
   Future<void> init() async {
     await loadConfigs();
-    await loadInstalledApps();
+    // Manual app scan only - removed automatic scan to improve performance
   }
 
   Future<void> loadConfigs() async {

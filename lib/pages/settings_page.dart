@@ -110,6 +110,40 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _showRescanAppsDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('重新掃描應用'),
+        content: const Text('是否重新掃描以同步當前裝置 app 數量？\n\n這將檢測新安裝的應用程式。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('掃描'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      final appConfigProvider = context.read<AppConfigProvider>();
+      await appConfigProvider.loadInstalledApps();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('掃描完成！目前共 ${appConfigProvider.appConfigs.length} 個應用'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _testWebhook() async {
     if (_webhookUrlController.text.trim().isEmpty) {
       if (!mounted) return;
@@ -260,6 +294,19 @@ class _SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
+          ListTile(
+            title: const Text('Rescan Apps'),
+            subtitle: const Text('同步當前裝置的應用程式列表'),
+            leading: const Icon(Icons.refresh),
+            trailing: appConfigProvider.isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
+            onTap: appConfigProvider.isLoading ? null : _showRescanAppsDialog,
+          ),
           const Divider(),
           const Padding(
             padding: EdgeInsets.all(16),
@@ -311,7 +358,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const ListTile(
             title: Text('Version'),
-            subtitle: Text('1.0.1'),
+            subtitle: Text('1.0.3+4'),
           ),
           const ListTile(
             title: Text('Description'),

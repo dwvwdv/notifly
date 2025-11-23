@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_config_provider.dart';
+import '../providers/settings_provider.dart';
+import '../services/webhook_service.dart';
 
 class AppSelectionPage extends StatefulWidget {
   const AppSelectionPage({super.key});
@@ -18,101 +20,215 @@ class _AppSelectionPageState extends State<AppSelectionPage> {
       controllers.add(TextEditingController());
     }
 
+    // Track testing state for each URL: null = not tested, true = testing, false = tested
+    final Map<int, bool?> testingStates = {};
+    final Map<int, bool> testResults = {}; // true = success, false = failed
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Webhooks for $appName'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Configure webhook URLs for this app. You can add multiple URLs.',
-                  style: TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: controllers.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: controllers[index],
-                                decoration: InputDecoration(
-                                  labelText: 'Webhook URL ${index + 1}',
-                                  hintText: 'https://your-server.com/webhook',
-                                  border: const OutlineInputBorder(),
+        builder: (context, setDialogState) {
+          Future<void> testWebhookUrl(int index) async {
+            final url = controllers[index].text.trim();
+            if (url.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('請先輸入 Webhook URL')),
+              );
+              return;
+            }
+
+            setDialogState(() {
+              testingStates[index] = true;
+            });
+
+            try {
+              final settingsProvider = context.read<SettingsProvider>();
+              final success = await WebhookService.instance.testWebhook(
+                url,
+                headers: settingsProvider.webhookHeaders,
+              );
+
+              setDialogState(() {
+                testingStates[index] = false;
+                testResults[index] = success;
+              });
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? 'Webhook 測試成功！' : 'Webhook 測試失敗'),
+                    backgroundColor: success ? Colors.green : Colors.red,
+                  ),
+                );
+              }
+            } catch (e) {
+              setDialogState(() {
+                testingStates[index] = false;
+                testResults[index] = false;
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: Text('Webhooks for $appName'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Configure webhook URLs for this app. You can add multiple URLs.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: controllers.length,
+                      itemBuilder: (context, index) {
+                        final isTesting = testingStates[index] == true;
+                        final hasResult = testResults.containsKey(index);
+                        final testSuccess = testResults[index] ?? false;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: controllers[index],
+                                      decoration: InputDecoration(
+                                        labelText: 'Webhook URL ${index + 1}',
+                                        hintText: 'https://your-server.com/webhook',
+                                        border: const OutlineInputBorder(),
+                                        suffixIcon: hasResult
+                                            ? Icon(
+                                                testSuccess ? Icons.check_circle : Icons.error,
+                                                color: testSuccess ? Colors.green : Colors.red,
+                                              )
+                                            : null,
+                                      ),
+                                      onChanged: (value) {
+                                        // Clear test result when URL changes
+                                        setDialogState(() {
+                                          testingStates.remove(index);
+                                          testResults.remove(index);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () {
+                                      setDialogState(() {
+                                        controllers[index].dispose();
+                                        controllers.removeAt(index);
+                                        // Reindex testing states
+                                        final newTestingStates = <int, bool?>{};
+                                        final newTestResults = <int, bool>{};
+                                        for (var i = 0; i < controllers.length; i++) {
+                                          if (i < index) {
+                                            if (testingStates.containsKey(i)) {
+                                              newTestingStates[i] = testingStates[i];
+                                            }
+                                            if (testResults.containsKey(i)) {
+                                              newTestResults[i] = testResults[i]!;
+                                            }
+                                          } else if (i >= index) {
+                                            if (testingStates.containsKey(i + 1)) {
+                                              newTestingStates[i] = testingStates[i + 1];
+                                            }
+                                            if (testResults.containsKey(i + 1)) {
+                                              newTestResults[i] = testResults[i + 1]!;
+                                            }
+                                          }
+                                        }
+                                        testingStates.clear();
+                                        testingStates.addAll(newTestingStates);
+                                        testResults.clear();
+                                        testResults.addAll(newTestResults);
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: ElevatedButton.icon(
+                                  onPressed: isTesting ? null : () => testWebhookUrl(index),
+                                  icon: isTesting
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.send, size: 16),
+                                  label: Text(isTesting ? '測試中...' : '測試 Webhook'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () {
-                                setDialogState(() {
-                                  controllers[index].dispose();
-                                  controllers.removeAt(index);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      );
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add URL'),
+                    onPressed: () {
+                      setDialogState(() {
+                        controllers.add(TextEditingController());
+                      });
                     },
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add URL'),
-                  onPressed: () {
-                    setDialogState(() {
-                      controllers.add(TextEditingController());
-                    });
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                for (var controller in controllers) {
-                  controller.dispose();
-                }
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final urls = controllers
-                    .map((c) => c.text.trim())
-                    .where((text) => text.isNotEmpty)
-                    .toList();
+            actions: [
+              TextButton(
+                onPressed: () {
+                  for (var controller in controllers) {
+                    controller.dispose();
+                  }
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final urls = controllers
+                      .map((c) => c.text.trim())
+                      .where((text) => text.isNotEmpty)
+                      .toList();
 
-                final appConfigProvider = context.read<AppConfigProvider>();
-                appConfigProvider.updateAppWebhookUrls(packageName, urls);
+                  final appConfigProvider = context.read<AppConfigProvider>();
+                  appConfigProvider.updateAppWebhookUrls(packageName, urls);
 
-                for (var controller in controllers) {
-                  controller.dispose();
-                }
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${urls.length} webhook URL(s) updated')),
-                );
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
+                  for (var controller in controllers) {
+                    controller.dispose();
+                  }
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${urls.length} webhook URL(s) updated')),
+                  );
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
