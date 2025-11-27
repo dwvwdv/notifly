@@ -1,8 +1,13 @@
 package com.lazyrhythm.hookfy
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.*
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import androidx.core.app.NotificationCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -11,12 +16,17 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.lazyrhythm.hookfy/notification"
     private val EVENT_CHANNEL = "com.lazyrhythm.hookfy/notification_stream"
+    private val WEBHOOK_FAILURE_CHANNEL_ID = "webhook_failure"
+    private val WEBHOOK_FAILURE_CHANNEL_NAME = "Webhook Failures"
 
     private var notificationReceiver: BroadcastReceiver? = null
     private var eventSink: EventChannel.EventSink? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Create notification channel for webhook failures
+        createNotificationChannel()
 
         // Method Channel for checking permissions and opening settings
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
@@ -32,6 +42,18 @@ class MainActivity: FlutterActivity() {
                 "getInstalledApps" -> {
                     val apps = getInstalledApps()
                     result.success(apps)
+                }
+                "sendWebhookFailureNotification" -> {
+                    val notificationId = call.argument<Int>("notificationId")
+                    val appName = call.argument<String>("appName")
+                    val title = call.argument<String>("title")
+
+                    if (notificationId != null && appName != null && title != null) {
+                        sendWebhookFailureNotification(notificationId, appName, title)
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARGS", "Missing required arguments", null)
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -126,5 +148,49 @@ class MainActivity: FlutterActivity() {
     override fun onDestroy() {
         unregisterNotificationReceiver()
         super.onDestroy()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(
+                WEBHOOK_FAILURE_CHANNEL_ID,
+                WEBHOOK_FAILURE_CHANNEL_NAME,
+                importance
+            ).apply {
+                description = "Notifications for webhook delivery failures"
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun sendWebhookFailureNotification(notificationId: Int, appName: String, title: String) {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("retry_notification_id", notificationId)
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            notificationId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, WEBHOOK_FAILURE_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("Webhook 發送失敗")
+            .setContentText("來自 $appName: $title")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("來自 $appName 的通知「$title」webhook 發送失敗，點擊查看詳情"))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(notificationId, notification)
     }
 }

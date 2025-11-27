@@ -20,8 +20,9 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -36,7 +37,8 @@ class DatabaseService {
         sub_text TEXT,
         big_text TEXT,
         timestamp INTEGER NOT NULL,
-        key TEXT
+        key TEXT,
+        webhook_status TEXT
       )
     ''');
 
@@ -48,6 +50,15 @@ class DatabaseService {
     await db.execute('''
       CREATE INDEX idx_package_name ON notifications(package_name)
     ''');
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add webhook_status column
+      await db.execute('''
+        ALTER TABLE notifications ADD COLUMN webhook_status TEXT
+      ''');
+    }
   }
 
   Future<int> insertNotification(NotificationModel notification) async {
@@ -140,6 +151,29 @@ class DatabaseService {
       where: 'package_name IN ($placeholders)',
       whereArgs: packageNames,
     );
+  }
+
+  Future<int> updateWebhookStatus(int id, String status) async {
+    final db = await database;
+    return await db.update(
+      'notifications',
+      {'webhook_status': status},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<NotificationModel?> getNotificationById(int id) async {
+    final db = await database;
+    final maps = await db.query(
+      'notifications',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) return null;
+    return NotificationModel.fromDatabase(maps.first);
   }
 
   Future<void> close() async {

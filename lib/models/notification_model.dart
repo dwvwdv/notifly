@@ -8,6 +8,7 @@ class NotificationModel {
   final String? bigText;
   final int timestamp;
   final String? key;
+  final String? webhookStatus; // null = not sent, 'success', 'failed', 'retried_success'
 
   NotificationModel({
     this.id,
@@ -19,6 +20,7 @@ class NotificationModel {
     this.bigText,
     required this.timestamp,
     this.key,
+    this.webhookStatus,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class NotificationModel {
       bigText: json['bigText'] as String?,
       timestamp: json['timestamp'] as int,
       key: json['key'] as String?,
+      webhookStatus: json['webhookStatus'] as String?,
     );
   }
 
@@ -46,6 +49,7 @@ class NotificationModel {
       'bigText': bigText,
       'timestamp': timestamp,
       'key': key,
+      'webhookStatus': webhookStatus,
     };
   }
 
@@ -60,6 +64,7 @@ class NotificationModel {
       'big_text': bigText,
       'timestamp': timestamp,
       'key': key,
+      'webhook_status': webhookStatus,
     };
   }
 
@@ -74,6 +79,34 @@ class NotificationModel {
       bigText: map['big_text'] as String?,
       timestamp: map['timestamp'] as int,
       key: map['key'] as String?,
+      webhookStatus: map['webhook_status'] as String?,
+    );
+  }
+
+  // Helper method to copy with new webhook status
+  NotificationModel copyWith({
+    int? id,
+    String? packageName,
+    String? appName,
+    String? title,
+    String? text,
+    String? subText,
+    String? bigText,
+    int? timestamp,
+    String? key,
+    String? webhookStatus,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      packageName: packageName ?? this.packageName,
+      appName: appName ?? this.appName,
+      title: title ?? this.title,
+      text: text ?? this.text,
+      subText: subText ?? this.subText,
+      bigText: bigText ?? this.bigText,
+      timestamp: timestamp ?? this.timestamp,
+      key: key ?? this.key,
+      webhookStatus: webhookStatus ?? this.webhookStatus,
     );
   }
 }

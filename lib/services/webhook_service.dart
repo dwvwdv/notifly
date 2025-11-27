@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/notification_model.dart';
 import 'preferences_service.dart';
+import 'database_service.dart';
 
 class WebhookService {
   static final WebhookService instance = WebhookService._init();
 
   WebhookService._init();
 
-  Future<bool> sendNotification(NotificationModel notification) async {
+  Future<bool> sendNotification(NotificationModel notification, {bool isRetry = false}) async {
     try {
       final prefs = PreferencesService.instance;
 
@@ -98,10 +99,26 @@ class WebhookService {
         }),
       );
 
-      // Return true if at least one webhook succeeded
-      return results.any((result) => result);
+      // Check if at least one webhook succeeded
+      final success = results.any((result) => result);
+
+      // Update database status if notification has an ID
+      if (notification.id != null) {
+        final status = success
+            ? (isRetry ? 'retried_success' : 'success')
+            : 'failed';
+        await DatabaseService.instance.updateWebhookStatus(notification.id!, status);
+      }
+
+      return success;
     } catch (e) {
       print('Webhook error: $e');
+
+      // Update database status to failed if notification has an ID
+      if (notification.id != null) {
+        await DatabaseService.instance.updateWebhookStatus(notification.id!, 'failed');
+      }
+
       return false;
     }
   }

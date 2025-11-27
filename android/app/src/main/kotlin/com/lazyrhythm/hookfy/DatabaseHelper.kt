@@ -10,7 +10,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "notifications.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
         private const val TABLE_NOTIFICATIONS = "notifications"
         private const val TAG = "DatabaseHelper"
 
@@ -24,6 +24,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val COLUMN_BIG_TEXT = "big_text"
         private const val COLUMN_TIMESTAMP = "timestamp"
         private const val COLUMN_KEY = "key"
+        private const val COLUMN_WEBHOOK_STATUS = "webhook_status"
 
         @Volatile
         private var instance: DatabaseHelper? = null
@@ -46,7 +47,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 $COLUMN_SUB_TEXT TEXT,
                 $COLUMN_BIG_TEXT TEXT,
                 $COLUMN_TIMESTAMP INTEGER NOT NULL,
-                $COLUMN_KEY TEXT
+                $COLUMN_KEY TEXT,
+                $COLUMN_WEBHOOK_STATUS TEXT
             )
         """.trimIndent()
 
@@ -60,8 +62,19 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_NOTIFICATIONS")
-        onCreate(db)
+        Log.d(TAG, "Upgrading database from version $oldVersion to $newVersion")
+
+        when {
+            oldVersion < 4 -> {
+                // Add webhook_status column if upgrading from version < 4
+                try {
+                    db.execSQL("ALTER TABLE $TABLE_NOTIFICATIONS ADD COLUMN $COLUMN_WEBHOOK_STATUS TEXT")
+                    Log.d(TAG, "Added webhook_status column")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error adding webhook_status column", e)
+                }
+            }
+        }
     }
 
     fun insertNotification(

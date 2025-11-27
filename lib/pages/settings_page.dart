@@ -358,7 +358,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const ListTile(
             title: Text('Version'),
-            subtitle: Text('1.0.3+4'),
+            subtitle: Text('1.0.4+5'),
           ),
           const ListTile(
             title: Text('Description'),

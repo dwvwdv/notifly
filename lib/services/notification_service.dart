@@ -40,7 +40,16 @@ class NotificationService {
 
             // Send to webhook (only if webhook is enabled)
             if (PreferencesService.instance.getWebhookEnabled()) {
-              await WebhookService.instance.sendNotification(notification);
+              final success = await WebhookService.instance.sendNotification(notification);
+
+              // If webhook failed and we have a notification ID, send failure notification
+              if (!success && notification.id != null) {
+                await _sendWebhookFailureNotification(
+                  notification.id!,
+                  notification.appName,
+                  notification.title,
+                );
+              }
             }
 
             // Notify listeners
@@ -54,6 +63,18 @@ class NotificationService {
         print('Notification stream error: $error');
       },
     );
+  }
+
+  Future<void> _sendWebhookFailureNotification(int notificationId, String appName, String title) async {
+    try {
+      await platform.invokeMethod('sendWebhookFailureNotification', {
+        'notificationId': notificationId,
+        'appName': appName,
+        'title': title,
+      });
+    } catch (e) {
+      print('Error sending webhook failure notification: $e');
+    }
   }
 
   Future<bool> checkNotificationPermission() async {

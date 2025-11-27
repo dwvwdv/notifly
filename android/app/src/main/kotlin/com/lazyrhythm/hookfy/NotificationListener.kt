@@ -106,7 +106,7 @@ class NotificationListener : NotificationListenerService() {
             // Save to database directly
             // This ensures notifications are saved even when the app is not running
             val dbHelper = DatabaseHelper.getInstance(applicationContext)
-            dbHelper.insertNotification(
+            val dbId = dbHelper.insertNotification(
                 packageName = packageName,
                 appName = appName,
                 title = title,
@@ -117,9 +117,9 @@ class NotificationListener : NotificationListenerService() {
                 key = sbn.key
             )
 
-            // Create notification data JSON
+            // Create notification data JSON (include database ID)
             val notificationData = JSONObject().apply {
-                put("id", sbn.id)
+                put("id", dbId.toInt()) // Use database ID instead of sbn.id
                 put("packageName", packageName)
                 put("appName", appName)
                 put("title", title)

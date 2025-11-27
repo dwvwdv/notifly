@@ -4,6 +4,7 @@ import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 import '../services/database_service.dart';
 import '../services/preferences_service.dart';
+import '../services/webhook_service.dart';
 import '../providers/settings_provider.dart';
 import 'settings_page.dart';
 import 'package:intl/intl.dart';
@@ -195,50 +196,147 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Color? _getWebhookStatusColor(String? status) {
+    switch (status) {
+      case 'success':
+        return Colors.green;
+      case 'failed':
+        return Colors.red;
+      case 'retried_success':
+        return Colors.green.shade700; // Dark green
+      default:
+        return null; // No webhook sent or webhook disabled
+    }
+  }
+
+  Future<void> _retryWebhook(NotificationModel notification) async {
+    // Capture ScaffoldMessenger before async gap
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Show loading indicator
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Text('正在重新發送 webhook...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      final success = await WebhookService.instance.sendNotification(notification, isRetry: true);
+
+      if (mounted) {
+        scaffoldMessenger.hideCurrentSnackBar();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Webhook 發送成功！' : 'Webhook 發送失敗'),
+            backgroundColor: success ? Colors.green : Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Reload notifications to update UI
+        if (success) {
+          await _loadNotifications();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        scaffoldMessenger.hideCurrentSnackBar();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('發送失敗: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildNotificationCard(NotificationModel notification) {
+    final statusColor = _getWebhookStatusColor(notification.webhookStatus);
+    final showRetryButton = notification.webhookStatus == 'failed';
+
     return Card(
       margin: const EdgeInsets.symmetric(
         horizontal: 8,
         vertical: 4,
       ),
-      child: ListTile(
-        title: Text(
-          notification.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              notification.text,
-              maxLines: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: statusColor != null
+            ? BorderSide(color: statusColor, width: 2)
+            : BorderSide.none,
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(
+              notification.title,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 4),
-            Row(
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  notification.appName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  notification.text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  _formatTimestamp(notification.timestamp),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      notification.appName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatTimestamp(notification.timestamp),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    if (statusColor != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(
+                        notification.webhookStatus == 'failed'
+                            ? Icons.error
+                            : Icons.check_circle,
+                        size: 16,
+                        color: statusColor,
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-        isThreeLine: true,
+            isThreeLine: true,
+          ),
+          if (showRetryButton)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _retryWebhook(notification),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('重新發送 Webhook'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
