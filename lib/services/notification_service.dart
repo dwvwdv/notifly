@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../models/notification_model.dart';
-import 'webhook_service.dart';
 import 'preferences_service.dart';
 
 class NotificationService {
@@ -50,18 +49,6 @@ class NotificationService {
         print('Notification stream error: $error');
       },
     );
-  }
-
-  Future<void> _sendWebhookFailureNotification(int notificationId, String appName, String title) async {
-    try {
-      await platform.invokeMethod('sendWebhookFailureNotification', {
-        'notificationId': notificationId,
-        'appName': appName,
-        'title': title,
-      });
-    } catch (e) {
-      print('Error sending webhook failure notification: $e');
-    }
   }
 
   Future<bool> checkNotificationPermission() async {
