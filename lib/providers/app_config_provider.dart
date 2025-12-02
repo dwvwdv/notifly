@@ -94,6 +94,15 @@ class AppConfigProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateAppConfig(AppConfig config) async {
+    final index = _appConfigs.indexWhere((c) => c.packageName == config.packageName);
+    if (index != -1) {
+      _appConfigs[index] = config;
+      await _saveConfigs();
+      notifyListeners();
+    }
+  }
+
   Future<void> _saveConfigs() async {
     await PreferencesService.instance.saveAppConfigs(_appConfigs);
   }

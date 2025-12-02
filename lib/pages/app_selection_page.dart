@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_config_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/webhook_service.dart';
+import 'app_filter_rules_page.dart';
 
 class AppSelectionPage extends StatefulWidget {
   const AppSelectionPage({super.key});
@@ -338,6 +339,15 @@ class _AppSelectionPageState extends State<AppSelectionPage> {
                                         fontStyle: FontStyle.italic,
                                       ),
                                     ),
+                                  if (config.filterRules.isNotEmpty)
+                                    Text(
+                                      '${config.filterRules.length} 個過濾規則',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.orange.shade700,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
                                 ],
                               ),
                               trailing: Row(
@@ -358,6 +368,29 @@ class _AppSelectionPageState extends State<AppSelectionPage> {
                                         config.webhookUrls,
                                       );
                                     },
+                                    tooltip: 'Webhook URLs',
+                                  ),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.filter_alt,
+                                      color: config.filterRules.isNotEmpty
+                                          ? Colors.orange
+                                          : Colors.grey,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AppFilterRulesPage(
+                                            appConfig: config,
+                                            onUpdate: (updatedConfig) {
+                                              appConfigProvider.updateAppConfig(updatedConfig);
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    tooltip: '進階條件',
                                   ),
                                   Switch(
                                     value: config.isEnabled,

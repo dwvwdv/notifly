@@ -1,7 +1,7 @@
 name: hookfy
 description: A Flutter app to monitor Android notifications with webhook support
 publish_to: 'none'
-version: 1.0.4+5
+version: 1.1.0+6
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -32,6 +32,7 @@ dependencies:
 
   # Utilities
   intl: ^0.19.0
+  uuid: ^4.0.0
 
 dev_dependencies:
   flutter_test:

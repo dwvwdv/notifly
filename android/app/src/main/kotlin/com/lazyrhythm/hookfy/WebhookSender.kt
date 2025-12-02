@@ -46,6 +46,30 @@ class WebhookSender(private val context: Context) {
                     return@thread
                 }
 
+                // Get filter rules for this app
+                val filterRules = getFilterRules(prefs, packageName)
+
+                // Create notification data for matching
+                val notificationData = NotificationData(
+                    packageName = packageName,
+                    appName = appName,
+                    title = title,
+                    text = text,
+                    subText = subText,
+                    bigText = bigText
+                )
+
+                // Check if notification matches filter rules
+                val matchResult = FilterMatcher.matchNotification(notificationData, filterRules)
+
+                if (!matchResult.matched) {
+                    Log.d(TAG, "Notification did not match filter rules, skipping webhook")
+                    // Update database status to "filtered" to indicate it was filtered out
+                    val dbHelper = DatabaseHelper.getInstance(context)
+                    dbHelper.updateWebhookStatus(notificationId, "filtered")
+                    return@thread
+                }
+
                 // Get webhook URLs
                 val webhookUrls = getWebhookUrls(prefs, packageName)
                 if (webhookUrls.isEmpty()) {
@@ -56,8 +80,11 @@ class WebhookSender(private val context: Context) {
                 // Get custom headers
                 val headers = getWebhookHeaders(prefs)
 
-                // Prepare payload
-                val payload = createPayload(packageName, appName, title, text, subText, bigText, timestamp)
+                // Prepare payload with extracted fields
+                val payload = createPayload(
+                    packageName, appName, title, text, subText, bigText, timestamp,
+                    matchResult.extractedFields
+                )
 
                 // Send to all webhook URLs
                 var anySuccess = false
@@ -163,7 +190,32 @@ class WebhookSender(private val context: Context) {
     }
 
     /**
-     * Create webhook payload JSON
+     * Get filter rules for a specific app
+     */
+    private fun getFilterRules(prefs: android.content.SharedPreferences, packageName: String): List<FilterRule> {
+        return try {
+            val appConfigsJson = prefs.getString("flutter.app_configs", null)
+            if (appConfigsJson != null) {
+                val appConfigsArray = JSONArray(appConfigsJson)
+                for (i in 0 until appConfigsArray.length()) {
+                    val config = appConfigsArray.getJSONObject(i)
+                    if (config.getString("packageName") == packageName) {
+                        val filterRulesArray = config.optJSONArray("filterRules")
+                        if (filterRulesArray != null) {
+                            return FilterMatcher.parseFilterRules(filterRulesArray)
+                        }
+                    }
+                }
+            }
+            emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting filter rules", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Create webhook payload JSON with extracted fields
      */
     private fun createPayload(
         packageName: String,
@@ -172,7 +224,8 @@ class WebhookSender(private val context: Context) {
         text: String,
         subText: String,
         bigText: String,
-        timestamp: Long
+        timestamp: Long,
+        extractedFields: Map<String, String> = emptyMap()
     ): JSONObject {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
@@ -189,6 +242,11 @@ class WebhookSender(private val context: Context) {
                 put("bigText", bigText)
                 put("timestamp", timestamp)
                 put("timestampISO", dateFormat.format(Date(timestamp)))
+
+                // Add extracted fields if any
+                if (extractedFields.isNotEmpty()) {
+                    put("extractedFields", JSONObject(extractedFields))
+                }
             })
         }
     }
