@@ -136,7 +136,6 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
         bigText: _manualBigTextController.text.isEmpty ? null : _manualBigTextController.text,
         subText: _manualSubTextController.text.isEmpty ? null : _manualSubTextController.text,
         timestamp: DateTime.now().millisecondsSinceEpoch,
-        postedAt: DateTime.now(),
       );
     } else {
       return _selectedNotification;
@@ -862,7 +861,6 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
 
   String? _extractedValue;
   String? _errorMessage;
-  List<String> _allGroups = [];
 
   @override
   void initState() {
@@ -910,7 +908,6 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
       setState(() {
         _extractedValue = null;
         _errorMessage = null;
-        _allGroups = [];
       });
       return;
     }
@@ -927,23 +924,17 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
         setState(() {
           _extractedValue = match.group(safeGroupIndex);
           _errorMessage = null;
-          _allGroups = List.generate(
-            match.groupCount + 1,
-            (i) => match.group(i) ?? '',
-          );
         });
       } else {
         setState(() {
           _extractedValue = null;
           _errorMessage = '無匹配結果';
-          _allGroups = [];
         });
       }
     } catch (e) {
       setState(() {
         _extractedValue = null;
         _errorMessage = '正則表達式錯誤: ${e.toString()}';
-        _allGroups = [];
       });
     }
   }
