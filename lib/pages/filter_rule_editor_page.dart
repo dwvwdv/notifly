@@ -31,6 +31,13 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
   NotificationModel? _selectedNotification;
   bool _isLoadingNotifications = false;
 
+  // 手動輸入模式
+  bool _useManualInput = false;
+  late TextEditingController _manualTitleController;
+  late TextEditingController _manualTextController;
+  late TextEditingController _manualBigTextController;
+  late TextEditingController _manualSubTextController;
+
   final List<String> _fieldOptions = [
     'title',
     'text',
@@ -75,12 +82,20 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
     _nameController = TextEditingController(text: widget.rule.name);
     _conditions = List.from(widget.rule.conditions);
     _extractors = List.from(widget.rule.extractors);
+    _manualTitleController = TextEditingController();
+    _manualTextController = TextEditingController();
+    _manualBigTextController = TextEditingController();
+    _manualSubTextController = TextEditingController();
     _loadRecentNotifications();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _manualTitleController.dispose();
+    _manualTextController.dispose();
+    _manualBigTextController.dispose();
+    _manualSubTextController.dispose();
     super.dispose();
   }
 
@@ -106,6 +121,24 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
       setState(() {
         _isLoadingNotifications = false;
       });
+    }
+  }
+
+  /// 獲取當前測試通知（從選中的通知或手動輸入）
+  NotificationModel? _getTestNotification() {
+    if (_useManualInput) {
+      return NotificationModel(
+        id: 0,
+        appName: widget.appName,
+        packageName: widget.packageName,
+        title: _manualTitleController.text,
+        text: _manualTextController.text,
+        bigText: _manualBigTextController.text.isEmpty ? null : _manualBigTextController.text,
+        subText: _manualSubTextController.text.isEmpty ? null : _manualSubTextController.text,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+    } else {
+      return _selectedNotification;
     }
   }
 
@@ -140,7 +173,7 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
         fieldLabels: _fieldLabels,
         operatorOptions: _operatorOptions,
         operatorLabels: _operatorLabels,
-        testNotification: _selectedNotification,
+        testNotification: _getTestNotification(),
       ),
     );
   }
@@ -159,7 +192,7 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
         fieldLabels: _fieldLabels,
         operatorOptions: _operatorOptions,
         operatorLabels: _operatorLabels,
-        testNotification: _selectedNotification,
+        testNotification: _getTestNotification(),
       ),
     );
   }
@@ -171,9 +204,10 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
   }
 
   void _addExtractor() {
-    if (_selectedNotification == null) {
+    final testNotification = _getTestNotification();
+    if (testNotification == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請先選擇一條測試通知')),
+        const SnackBar(content: Text('請先選擇一條測試通知或輸入測試數據')),
       );
       return;
     }
@@ -188,15 +222,16 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
         },
         fieldOptions: _fieldOptions,
         fieldLabels: _fieldLabels,
-        testNotification: _selectedNotification!,
+        testNotification: testNotification,
       ),
     );
   }
 
   void _editExtractor(int index) {
-    if (_selectedNotification == null) {
+    final testNotification = _getTestNotification();
+    if (testNotification == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請先選擇一條測試通知')),
+        const SnackBar(content: Text('請先選擇一條測試通知或輸入測試數據')),
       );
       return;
     }
@@ -212,7 +247,7 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
         },
         fieldOptions: _fieldOptions,
         fieldLabels: _fieldLabels,
-        testNotification: _selectedNotification!,
+        testNotification: testNotification,
       ),
     );
   }
@@ -274,50 +309,137 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 12),
-                  if (_recentNotifications.isEmpty && !_isLoadingNotifications)
-                    const Text(
-                      '暫無近期通知記錄',
-                      style: TextStyle(color: Colors.grey),
-                    )
-                  else if (_recentNotifications.isNotEmpty)
-                    DropdownButtonFormField<NotificationModel>(
-                      value: _selectedNotification,
+
+                  // 手動輸入開關
+                  Row(
+                    children: [
+                      const Text('手動輸入', style: TextStyle(fontSize: 14)),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: _useManualInput,
+                        onChanged: (value) {
+                          setState(() {
+                            _useManualInput = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (_useManualInput) ...[
+                    // 手動輸入表單
+                    TextField(
+                      controller: _manualTitleController,
                       decoration: const InputDecoration(
+                        labelText: '標題',
                         border: OutlineInputBorder(),
                         fillColor: Colors.white,
                         filled: true,
                         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      isExpanded: true,
-                      items: _recentNotifications.map((notification) {
-                        return DropdownMenuItem(
-                          value: notification,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _manualTextController,
+                      decoration: const InputDecoration(
+                        labelText: '內容',
+                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _manualBigTextController,
+                      decoration: const InputDecoration(
+                        labelText: '完整內容（可選）',
+                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _manualSubTextController,
+                      decoration: const InputDecoration(
+                        labelText: '副標題（可選）',
+                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ] else ...[
+                    // 從現有通知選擇
+                    if (_recentNotifications.isEmpty && !_isLoadingNotifications)
+                      const Text(
+                        '暫無近期通知記錄',
+                        style: TextStyle(color: Colors.grey),
+                      )
+                    else if (_recentNotifications.isNotEmpty)
+                      DropdownButtonFormField<NotificationModel>(
+                        value: _selectedNotification,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          fillColor: Colors.white,
+                          filled: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        isExpanded: true,
+                        menuMaxHeight: 400,
+                        items: _recentNotifications.map((notification) {
+                          return DropdownMenuItem(
+                            value: notification,
+                            child: Text(
+                              notification.title.isEmpty ? '(無標題)' : notification.title,
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedNotification = value;
+                          });
+                        },
+                      ),
+                      if (_selectedNotification != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                notification.title.isEmpty ? '(無標題)' : notification.title,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                '內容預覽',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade700,
+                                ),
                               ),
+                              const SizedBox(height: 4),
                               Text(
-                                notification.text,
-                                style: const TextStyle(fontSize: 12),
-                                maxLines: 1,
+                                _selectedNotification!.text,
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedNotification = value;
-                        });
-                      },
-                    ),
+                        ),
+                      ],
+                  ],
                 ],
               ),
             ),
@@ -751,7 +873,6 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
 
   String? _extractedValue;
   String? _errorMessage;
-  List<String> _allGroups = [];
 
   @override
   void initState() {
@@ -799,7 +920,6 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
       setState(() {
         _extractedValue = null;
         _errorMessage = null;
-        _allGroups = [];
       });
       return;
     }
@@ -816,23 +936,17 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
         setState(() {
           _extractedValue = match.group(safeGroupIndex);
           _errorMessage = null;
-          _allGroups = List.generate(
-            match.groupCount + 1,
-            (i) => match.group(i) ?? '',
-          );
         });
       } else {
         setState(() {
           _extractedValue = null;
           _errorMessage = '無匹配結果';
-          _allGroups = [];
         });
       }
     } catch (e) {
       setState(() {
         _extractedValue = null;
         _errorMessage = '正則表達式錯誤: ${e.toString()}';
-        _allGroups = [];
       });
     }
   }
@@ -841,229 +955,250 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
   Widget build(BuildContext context) {
     final fieldValue = _getFieldValue(_selectedField);
 
-    return AlertDialog(
-      title: Text(widget.extractor == null ? '添加提取器' : '編輯提取器'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 即時預覽區域
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _extractedValue != null ? Colors.green.shade50 : Colors.grey.shade100,
-                  border: Border.all(
-                    color: _extractedValue != null ? Colors.green : Colors.grey,
-                    width: 2,
+    return Dialog(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 標題欄
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(4),
+                topRight: Radius.circular(4),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  widget.extractor == null ? '添加提取器' : '編輯提取器',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ],
+            ),
+          ),
+
+          // 固定在頂部的即時預覽區域
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _extractedValue != null ? Colors.green.shade50 : Colors.grey.shade100,
+              border: Border.all(
+                color: _extractedValue != null ? Colors.green : Colors.grey,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _extractedValue != null ? Icons.check_circle : Icons.info,
-                          color: _extractedValue != null ? Colors.green : Colors.grey,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '即時預覽',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: _extractedValue != null ? Colors.green.shade700 : Colors.grey.shade700,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      _extractedValue != null ? Icons.check_circle : Icons.info,
+                      color: _extractedValue != null ? Colors.green : Colors.grey,
+                      size: 20,
                     ),
-                    const Divider(),
+                    const SizedBox(width: 8),
                     Text(
-                      '測試文本:',
+                      '即時預覽',
                       style: TextStyle(
-                        fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade700,
+                        color: _extractedValue != null ? Colors.green.shade700 : Colors.grey.shade700,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        fieldValue.isEmpty ? '(空)' : fieldValue,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_extractedValue != null) ...[
-                      Text(
-                        '✓ 提取結果:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _extractedValue!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      if (_allGroups.length > 1) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          '所有捕獲組:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        ..._allGroups.asMap().entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: Text(
-                              '組 ${entry.key}: ${entry.value}',
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                          );
-                        }),
-                      ],
-                    ] else if (_errorMessage != null) ...[
-                      Text(
-                        '✗ $_errorMessage',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              const Text('名稱', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: '例如：amount、currency',
+                const Divider(),
+                Text(
+                  '測試文本:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              const Text('來源字段', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _selectedField,
-                decoration: const InputDecoration(border: OutlineInputBorder()),
-                items: widget.fieldOptions.map((field) {
-                  return DropdownMenuItem(
-                    value: field,
-                    child: Text(widget.fieldLabels[field] ?? field),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedField = value;
-                      _testExtraction();
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text('正則表達式', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _patternController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: r'例如：(\d+\.?\d*)(USDT|BTC)',
+                const SizedBox(height: 4),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 60),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      fieldValue.isEmpty ? '(空)' : fieldValue,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '使用括號 () 來捕獲想提取的內容',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              const Text('捕獲組索引', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _groupController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: '1',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '0 = 整個匹配，1 = 第一個括號，2 = 第二個括號...',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
+                const SizedBox(height: 8),
+                if (_extractedValue != null) ...[
+                  Text(
+                    '✓ 提取結果:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _extractedValue!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ] else if (_errorMessage != null) ...[
+                  Text(
+                    '✗ $_errorMessage',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.red,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+
+          // 可滾動的表單區域
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('名稱', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '例如：amount、currency',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('來源字段', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedField,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: widget.fieldOptions.map((field) {
+                      return DropdownMenuItem(
+                        value: field,
+                        child: Text(widget.fieldLabels[field] ?? field),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _selectedField = value;
+                          _testExtraction();
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('正則表達式', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _patternController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: r'例如：(\d+\.?\d*)(USDT|BTC)',
+                    ),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '使用括號 () 來捕獲想提取的內容',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('捕獲組索引', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _groupController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '1',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '0 = 整個匹配，1 = 第一個括號，2 = 第二個括號...',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+
+          // 底部按鈕
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('請輸入名稱')),
+                      );
+                      return;
+                    }
+
+                    if (_patternController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('請輸入正則表達式')),
+                      );
+                      return;
+                    }
+
+                    final group = int.tryParse(_groupController.text.trim()) ?? 1;
+
+                    final extractor = PlaceholderExtractor(
+                      name: _nameController.text.trim(),
+                      sourceField: _selectedField,
+                      pattern: _patternController.text.trim(),
+                      group: group,
+                    );
+
+                    widget.onSave(extractor);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('確定'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (_nameController.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('請輸入名稱')),
-              );
-              return;
-            }
-
-            if (_patternController.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('請輸入正則表達式')),
-              );
-              return;
-            }
-
-            final group = int.tryParse(_groupController.text.trim()) ?? 1;
-
-            final extractor = PlaceholderExtractor(
-              name: _nameController.text.trim(),
-              sourceField: _selectedField,
-              pattern: _patternController.text.trim(),
-              group: group,
-            );
-
-            widget.onSave(extractor);
-            Navigator.pop(context);
-          },
-          child: const Text('確定'),
-        ),
-      ],
     );
   }
 }
