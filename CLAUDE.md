@@ -6,7 +6,7 @@
 
 **Hookfy** - Flutter Android 通知監測應用，支援 Webhook 推送。
 
-- **版本**: 1.1.0+6
+- **版本**: 1.1.1+7
 - **技術棧**: Flutter + Kotlin + SQLite + Provider
 
 ## 文檔索引

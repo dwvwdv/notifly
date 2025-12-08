@@ -55,6 +55,13 @@ class MainActivity: FlutterActivity() {
                         result.error("INVALID_ARGS", "Missing required arguments", null)
                     }
                 }
+                "getSensitiveNotificationStatus" -> {
+                    val status = getSensitiveNotificationStatus()
+                    result.success(status)
+                }
+                "getPackageName" -> {
+                    result.success(packageName)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -192,5 +199,46 @@ class MainActivity: FlutterActivity() {
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(notificationId, notification)
+    }
+
+    /**
+     * Get status information about sensitive notification access
+     * Returns a map with:
+     * - androidVersion: Current Android SDK version
+     * - hasRestriction: Whether device has sensitive notification restrictions (Android 15+)
+     * - canAccessSensitive: Whether app can access sensitive notifications (best effort check)
+     */
+    private fun getSensitiveNotificationStatus(): Map<String, Any> {
+        val androidVersion = Build.VERSION.SDK_INT
+        val hasRestriction = androidVersion >= 35 // Android 15 (API 35)
+
+        // Check if we have RECEIVE_SENSITIVE_NOTIFICATIONS permission
+        // This is a best-effort check as the permission is difficult to query directly
+        var canAccessSensitive = false
+
+        if (hasRestriction) {
+            try {
+                // Try to check the permission using AppOpsManager
+                val appOps = getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+                val mode = appOps.unsafeCheckOpNoThrow(
+                    "android:receive_sensitive_notifications",
+                    android.os.Process.myUid(),
+                    packageName
+                )
+                canAccessSensitive = (mode == android.app.AppOpsManager.MODE_ALLOWED)
+            } catch (e: Exception) {
+                // If we can't check, assume we don't have it
+                canAccessSensitive = false
+            }
+        } else {
+            // On Android 14 and below, there's no restriction
+            canAccessSensitive = true
+        }
+
+        return mapOf(
+            "androidVersion" to androidVersion,
+            "hasRestriction" to hasRestriction,
+            "canAccessSensitive" to canAccessSensitive
+        )
     }
 }

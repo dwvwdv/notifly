@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../providers/settings_provider.dart';
 import '../providers/app_config_provider.dart';
 import 'app_selection_page.dart';
+import 'sensitive_notification_guide_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -15,10 +17,47 @@ class _SettingsPageState extends State<SettingsPage> {
   final _webhookUrlController = TextEditingController();
   bool _isTestingWebhook = false;
 
+  // Sensitive notification status
+  int _androidVersion = 0;
+  bool _hasRestriction = false;
+  bool _canAccessSensitive = false;
+  String _packageName = '';
+  bool _isLoadingSensitiveStatus = true;
+
+  static const platform = MethodChannel('com.lazyrhythm.hookfy/notification');
+
   @override
   void initState() {
     super.initState();
     _loadWebhookUrl();
+    _loadSensitiveNotificationStatus();
+  }
+
+  Future<void> _loadSensitiveNotificationStatus() async {
+    try {
+      setState(() {
+        _isLoadingSensitiveStatus = true;
+      });
+
+      final status = await platform.invokeMethod<Map>('getSensitiveNotificationStatus');
+      final packageName = await platform.invokeMethod<String>('getPackageName');
+
+      if (status != null && mounted) {
+        setState(() {
+          _androidVersion = status['androidVersion'] as int;
+          _hasRestriction = status['hasRestriction'] as bool;
+          _canAccessSensitive = status['canAccessSensitive'] as bool;
+          _packageName = packageName ?? '';
+          _isLoadingSensitiveStatus = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingSensitiveStatus = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadWebhookUrl() async {
@@ -181,6 +220,241 @@ class _SettingsPageState extends State<SettingsPage> {
         });
       }
     }
+  }
+
+  Widget _buildSensitiveNotificationSection() {
+    if (_isLoadingSensitiveStatus) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // For Android 14 and below, show a simple info message
+    if (!_hasRestriction) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green.shade700, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '無限制',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.green.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Android $_androidVersion 版本無敏感通知存取限制',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // For Android 15+, show detailed status
+    return Column(
+      children: [
+        // Status card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _canAccessSensitive ? Colors.green.shade50 : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _canAccessSensitive ? Colors.green.shade200 : Colors.orange.shade200,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      _canAccessSensitive ? Icons.check_circle : Icons.warning_amber,
+                      color: _canAccessSensitive ? Colors.green.shade700 : Colors.orange.shade700,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _canAccessSensitive ? '已授權' : '受限',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: _canAccessSensitive
+                                  ? Colors.green.shade900
+                                  : Colors.orange.shade900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Android $_androidVersion',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: _canAccessSensitive
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.refresh,
+                        color: _canAccessSensitive
+                            ? Colors.green.shade700
+                            : Colors.orange.shade700,
+                      ),
+                      onPressed: _loadSensitiveNotificationStatus,
+                      tooltip: '重新檢測',
+                    ),
+                  ],
+                ),
+                if (!_canAccessSensitive) ...[
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  Text(
+                    '⚠️ 受影響的通知類型：',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildBulletPoint('2FA 驗證碼通知', Colors.orange),
+                  _buildBulletPoint('簡訊驗證碼', Colors.orange),
+                  _buildBulletPoint('銀行驗證通知', Colors.orange),
+                  const SizedBox(height: 12),
+                  Text(
+                    '這些通知會顯示為「sensitive notification content hidden」，無法接收完整內容。',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.orange.shade700,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        // Solution button
+        if (!_canAccessSensitive)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SensitiveNotificationGuidePage(
+                        packageName: _packageName,
+                      ),
+                    ),
+                  ).then((_) {
+                    // Refresh status when returning from guide page
+                    _loadSensitiveNotificationStatus();
+                  });
+                },
+                icon: const Icon(Icons.help_outline),
+                label: const Text('查看解決方案'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        // Info section
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _canAccessSensitive
+                        ? 'Hookfy 已獲得敏感通知存取權限，可以接收所有類型的通知。'
+                        : 'Android 15 為保護用戶安全，自動隱藏包含驗證碼等敏感信息的通知內容。點擊上方按鈕查看解決方案。',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBulletPoint(String text, MaterialColor color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(fontSize: 14, color: color.shade700),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 13, color: color.shade700),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -349,6 +623,18 @@ class _SettingsPageState extends State<SettingsPage> {
           const Padding(
             padding: EdgeInsets.all(16),
             child: Text(
+              '敏感通知存取',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          _buildSensitiveNotificationSection(),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
               'About',
               style: TextStyle(
                 fontSize: 18,
@@ -358,7 +644,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const ListTile(
             title: Text('Version'),
-            subtitle: Text('1.1.0+6'),
+            subtitle: Text('1.1.1+7'),
           ),
           const ListTile(
             title: Text('Description'),
