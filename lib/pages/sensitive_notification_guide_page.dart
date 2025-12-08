@@ -45,7 +45,7 @@ class _SensitiveNotificationGuidePageState
             child: Row(
               children: [
                 Expanded(
-                  child: _SolutionTab(
+                  child: _buildSolutionTab(
                     title: '方案 A：ADB 授權',
                     subtitle: '推薦給技術用戶',
                     isSelected: _selectedSolution == 0,
@@ -54,7 +54,7 @@ class _SensitiveNotificationGuidePageState
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _SolutionTab(
+                  child: _buildSolutionTab(
                     title: '方案 B：關閉增強通知',
                     subtitle: '適合所有用戶',
                     isSelected: _selectedSolution == 1,
@@ -238,7 +238,7 @@ class _SensitiveNotificationGuidePageState
           icon: Icons.warning_amber,
           title: '此方案會影響整個系統',
           description: '關閉後將失去通知建議回覆等功能，但操作簡單且立即生效。',
-          color: Colors.orange,
+          color: Colors.deepOrange,
         ),
         const SizedBox(height: 24),
         _buildStepCard(
@@ -392,7 +392,7 @@ class _SensitiveNotificationGuidePageState
     required IconData icon,
     required String title,
     required String description,
-    Color color = Colors.blue,
+    MaterialColor color = Colors.blue,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
