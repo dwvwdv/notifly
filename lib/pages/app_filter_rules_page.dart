@@ -454,11 +454,11 @@ class _ImportRuleDialogState extends State<_ImportRuleDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          SizedBox(width: 8),
+                          Text(
                             '規則預覽',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
