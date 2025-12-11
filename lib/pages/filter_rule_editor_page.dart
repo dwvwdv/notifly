@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import '../models/filter_condition.dart';
 import '../models/notification_model.dart';
 import '../services/database_service.dart';
@@ -258,12 +260,37 @@ class _FilterRuleEditorPageState extends State<FilterRuleEditorPage> {
     });
   }
 
+  void _importFromRule() {
+    showDialog(
+      context: context,
+      builder: (context) => _ImportConditionsDialog(
+        onImport: (conditions, extractors) {
+          setState(() {
+            _conditions.addAll(conditions);
+            _extractors.addAll(extractors);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已導入 ${conditions.length} 個條件和 ${extractors.length} 個提取器'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('編輯規則 - ${widget.appName}'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _importFromRule,
+            tooltip: '導入條件',
+          ),
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: _saveRule,
@@ -1199,6 +1226,225 @@ class _ExtractorEditorDialogState extends State<_ExtractorEditorDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 導入條件和提取器對話框
+class _ImportConditionsDialog extends StatefulWidget {
+  final Function(List<FilterCondition>, List<PlaceholderExtractor>) onImport;
+
+  const _ImportConditionsDialog({
+    required this.onImport,
+  });
+
+  @override
+  State<_ImportConditionsDialog> createState() => _ImportConditionsDialogState();
+}
+
+class _ImportConditionsDialogState extends State<_ImportConditionsDialog> {
+  final TextEditingController _jsonController = TextEditingController();
+  String? _errorMessage;
+  FilterRule? _previewRule;
+
+  @override
+  void dispose() {
+    _jsonController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard() async {
+    try {
+      final clipboardData = await Clipboard.getData('text/plain');
+      if (clipboardData != null && clipboardData.text != null) {
+        setState(() {
+          _jsonController.text = clipboardData.text!;
+          _validateJson();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = '無法從剪貼板粘貼: $e';
+      });
+    }
+  }
+
+  void _validateJson() {
+    setState(() {
+      _errorMessage = null;
+      _previewRule = null;
+    });
+
+    final jsonText = _jsonController.text.trim();
+    if (jsonText.isEmpty) {
+      return;
+    }
+
+    try {
+      final jsonData = jsonDecode(jsonText);
+      final rule = FilterRule.fromJson(jsonData as Map<String, dynamic>);
+      setState(() {
+        _previewRule = rule;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = '無效的 JSON 格式: $e';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('導入條件和提取器'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '從已匯出的規則中導入條件和提取器：',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _jsonController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '粘貼規則 JSON...',
+                ),
+                maxLines: 6,
+                onChanged: (_) => _validateJson(),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _pasteFromClipboard,
+                icon: const Icon(Icons.content_paste, size: 18),
+                label: const Text('從剪貼板粘貼'),
+              ),
+              const SizedBox(height: 16),
+
+              // 預覽區域
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (_previewRule != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    border: Border.all(color: Colors.green),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '將導入自「${_previewRule!.name}」',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(),
+                      Text('條件數: ${_previewRule!.conditions.length}'),
+                      Text('提取器數: ${_previewRule!.extractors.length}'),
+                      if (_previewRule!.conditions.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          '條件:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        ..._previewRule!.conditions.take(3).map((c) => Padding(
+                              padding: const EdgeInsets.only(left: 8, top: 4),
+                              child: Text(
+                                '• ${c.field} ${c.operator} "${c.value}"',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            )),
+                        if (_previewRule!.conditions.length > 3)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8, top: 4),
+                            child: Text(
+                              '...及 ${_previewRule!.conditions.length - 3} 個其他條件',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                          ),
+                      ],
+                      if (_previewRule!.extractors.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        const Text(
+                          '提取器:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        ..._previewRule!.extractors.take(3).map((e) => Padding(
+                              padding: const EdgeInsets.only(left: 8, top: 4),
+                              child: Text(
+                                '• ${e.name} (${e.sourceField})',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            )),
+                        if (_previewRule!.extractors.length > 3)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8, top: 4),
+                            child: Text(
+                              '...及 ${_previewRule!.extractors.length - 3} 個其他提取器',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          onPressed: _previewRule != null
+              ? () {
+                  widget.onImport(
+                    _previewRule!.conditions,
+                    _previewRule!.extractors,
+                  );
+                  Navigator.pop(context);
+                }
+              : null,
+          child: const Text('導入'),
+        ),
+      ],
     );
   }
 }
