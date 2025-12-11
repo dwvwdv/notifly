@@ -6,7 +6,7 @@
 
 **Hookfy** - Flutter Android 通知監測應用，支援 Webhook 推送。
 
-- **版本**: 1.2.0+8
+- **版本**: 1.2.0
 - **技術棧**: Flutter + Kotlin + SQLite + Provider
 
 ## 文檔索引
@@ -38,7 +38,7 @@ flutter analyze    # 代碼分析
 
 **每次進行功能調整或修復都必須更新版本號！**
 
-版本號格式：`major.minor.patch+build`（例如：`1.0.3+4`）
+版本號格式：`major.minor.patch`（例如：`1.0.3`）
 
 #### 版本更新流程
 
@@ -46,7 +46,6 @@ flutter analyze    # 代碼分析
    - 修改 `pubspec.yaml` 中的 `version` 欄位
    - 新功能：增加 `minor` 版本號（1.0.x → 1.1.x）
    - Bug 修復或小改進：增加 `patch` 版本號（1.0.3 → 1.0.4）
-   - 每次更新都要增加 `build` 號（+3 → +4）
 
 2. **同步版本資訊**
    - 更新 `lib/pages/settings_page.dart` 中的版本顯示
@@ -55,20 +54,20 @@ flutter analyze    # 代碼分析
 
 3. **提交訊息**
    ```bash
-   git commit -m "chore: 更新版本號至 x.x.x+x"
+   git commit -m "chore: 更新版本號至 x.x.x"
    ```
 
 #### 範例
 
 ```dart
 // pubspec.yaml
-version: 1.0.4+5
+version: 1.0.4
 
 // settings_page.dart
-subtitle: Text('1.0.4+5'),
+subtitle: Text('1.0.4'),
 
 // CLAUDE.md
-- **版本**: 1.0.4+5
+- **版本**: 1.0.4
 ```
 
 ## 核心文件
